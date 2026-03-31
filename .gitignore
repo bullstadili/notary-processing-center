@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Project specific - data directories and files
+input/
+ocr-output/
+renamed/
+output/
+*.db
+*.pdf
+*.log
+*.txt
+parse_results.txt
+reprocess.log
+rename_*.log
+ocr_*.log
+notary_processing.db
+
+
+# Kilo
+.kilo/
