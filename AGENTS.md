@@ -243,3 +243,46 @@ All other agents (OCR, Parse, Rename) automatically delegate to the database whe
 - SQLite provides embedded, single-file database with no server required
 - Full audit trail tracks all processing steps for compliance
 - Database can be queried for reporting and statistics
+
+## Validation Dashboard Agent
+
+Web-based interface for reviewing and correcting OCR‑extracted data.
+
+### Setup
+
+1. Install Python dependencies:
+   ```bash
+   python3 -m pip install -r requirements.txt
+   ```
+   (or use the virtual environment: `source venv/bin/activate`)
+
+2. Ensure the SQLite database (`notary_processing.db`) exists and contains extracted data.
+
+### Usage
+
+Run the dashboard:
+```bash
+python3 validation_dashboard.py
+```
+
+Then open http://localhost:5000 in your browser.
+
+### Features
+
+- **Dashboard overview**: Statistics on validation progress, confidence scores, document types.
+- **Document review**: List of documents needing validation (low confidence or not validated).
+- **Field‑level correction**: Edit any extracted field with real‑time preview of OCR text.
+- **Validation tracking**: Mark documents as validated, track who validated and when.
+- **Audit trail**: All corrections are logged to the `audit_log` table.
+
+### Integration
+
+- Reads from `extracted_data` table (new columns: `validated`, `validated_at`, `validated_by`, `correction_notes`).
+- The Rename Agent automatically uses validated data when available.
+- All corrections trigger the existing audit‑log trigger.
+
+### Notes
+
+- The dashboard runs locally on port 5000 (configurable in code).
+- No authentication by default; add authentication for multi‑user environments.
+- For production deployment, consider using a WSGI server (gunicorn) behind a reverse proxy.

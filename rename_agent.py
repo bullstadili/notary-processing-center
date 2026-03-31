@@ -21,6 +21,37 @@ except ImportError:
     DATABASE_AVAILABLE = False
     print("Warning: database_manager module not found. Database logging disabled.")
 
+def get_extracted_info(md_path, db_manager=None, doc_id=None):
+    """
+    Get extracted information, preferring validated database entries.
+    Returns dict with same keys as parse_markdown_file.
+    """
+    # Try to get validated data from database first
+    if db_manager and doc_id:
+        try:
+            extracted = db_manager.get_extracted_data(doc_id)
+            if extracted and extracted.get('validated') == 1:
+                # Convert database fields to info dict
+                info = {
+                    'date_of_notarization': extracted.get('date_of_notarization'),
+                    'document_number': extracted.get('document_number'),
+                    'document_type': extracted.get('document_type'),
+                    'page_number': extracted.get('page_number'),
+                    'book_number': extracted.get('book_number'),
+                    'series_year': extracted.get('series_year'),
+                    'lastname': extracted.get('lastname'),
+                    'is_waiver': bool(extracted.get('is_waiver', 0)),
+                    'is_corporate': bool(extracted.get('is_corporate', 0)),
+                }
+                # Ensure we have at least some data
+                if any(info.values()):
+                    return info
+        except Exception as e:
+            print(f"  Warning: Failed to get validated data: {e}")
+    
+    # Fall back to parsing markdown file
+    return parse_markdown_file(md_path)
+
 def convert_to_iso_date(date_str):
     """
     Convert extracted date string to ISO format (YYYY-MM-DD).
@@ -217,9 +248,9 @@ def rename_file(pdf_path, md_path, output_dir, template=None, dry_run=False, int
     md_path = Path(md_path)
     output_dir = Path(output_dir)
     
-    # Parse markdown file
+    # Get extracted information (prefer validated database entries)
     try:
-        info = parse_markdown_file(md_path)
+        info = get_extracted_info(md_path, db_manager, doc_id)
     except Exception as e:
         # Log error to database if available
         if db_manager and doc_id:
@@ -228,11 +259,11 @@ def rename_file(pdf_path, md_path, output_dir, template=None, dry_run=False, int
                     document_id=doc_id,
                     agent_name='rename',
                     error_type='parse_error',
-                    error_message=f"Failed to parse markdown: {e}"
+                    error_message=f"Failed to get extracted info: {e}"
                 )
             except:
                 pass
-        return (False, pdf_path, None, f"Failed to parse markdown: {e}")
+        return (False, pdf_path, None, f"Failed to get extracted info: {e}")
     
     # Generate new filename
     try:

@@ -9,6 +9,7 @@ This project provides a set of agents for processing notarial PDF documents:
 - **Parse Agent**: Extracts key information (dates, document numbers, names, etc.) from OCR output
 - **Rename Agent**: Renames PDF files based on extracted information with standardized naming
 - **Database Agent**: Manages SQLite database for tracking processing history and audit trails
+- **Validation Dashboard Agent**: Web-based interface for reviewing and correcting extracted data
 
 ## Project Structure
 

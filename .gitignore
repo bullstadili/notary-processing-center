@@ -21,13 +21,16 @@ output/
 *.db
 *.pdf
 *.log
-*.txt
+parse_results.txt
 parse_results.txt
 reprocess.log
 rename_*.log
 ocr_*.log
 notary_processing.db
-
+notary_processing.db.backup_*
+*.pid
+dashboard.pid
+backup_*/
 
 # Kilo
 .kilo/

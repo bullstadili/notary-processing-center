@@ -51,6 +51,10 @@ CREATE TABLE IF NOT EXISTS extracted_data (
     extraction_method TEXT, -- 'regex', 'manual', 'ai', etc.
     confidence_score REAL, -- 0.0 to 1.0
     extraction_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    validated INTEGER DEFAULT 0,
+    validated_at TIMESTAMP,
+    validated_by TEXT,
+    correction_notes TEXT,
     FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
 );
 
