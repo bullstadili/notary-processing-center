@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS extracted_data (
     date_of_notarization TEXT,
     document_number TEXT,
     document_type TEXT,
+    document_category TEXT, -- Standardized category (Affidavit, Waiver, Contract, etc.)
     page_number TEXT, -- Page No. from notarial register
     book_number TEXT, -- Book No.
     series_year TEXT, -- Series of

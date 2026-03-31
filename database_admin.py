@@ -104,6 +104,16 @@ def cmd_stats(args):
         print(f"  - Extracted: {stats.get('documents_extracted', 0)}")
         print(f"  - Renamed: {stats.get('documents_renamed', 0)}")
         
+        # Extraction completeness
+        if 'extraction_completeness' in stats:
+            comp = stats['extraction_completeness']
+            print(f"\nExtraction Completeness (% of extracted documents):")
+            print(f"  - Date of Notarization: {comp.get('date_of_notarization', 0):.1f}%")
+            print(f"  - Document Number: {comp.get('document_number', 0):.1f}%")
+            print(f"  - Document Type: {comp.get('document_type', 0):.1f}%")
+            print(f"  - Lastname: {comp.get('lastname', 0):.1f}%")
+            print(f"  - Document Category: {comp.get('document_category', 0):.1f}%")
+        
         print(f"\nErrors:")
         print(f"  - Recent unresolved: {stats.get('recent_unresolved_errors', 0)}")
         

@@ -14,6 +14,7 @@ import re
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 # Database integration
 try:
@@ -26,24 +27,48 @@ except ImportError:
 def extract_date_of_notarization(text):
     """Extract date of notarization from text."""
     patterns = [
+        # "Date of Notarization: Feb. 02, 2020" (waiver) - high priority
+        r"Date of Notarization:\s*([A-Za-z]+\.?\s*\d{1,2},?\s*\d{4})",
+        
         # "SUBSCRIBED AND SWORN TO BEFORE ME this 12 FEB 2026 day of February, 2026"
-        r"SUBSCRIBED AND SWORN TO BEFORE ME.*?this\s+(\d{1,2}\s+[A-Z]+\s+\d{4})",
-        # "SUBSCRIBED AND SWORN TO BEFORE ME, a notary public ... this ____ day of FEB 02 2026"
-        r"this\s+[^0-9]*?([A-Z]+\s+\d{1,2}\s+\d{4})",
+        # Allow optional comma after SWORN, optional "TO", optional "BEFORE ME"
+        r"SUBSCRIBED?\s+AND\s+SWORN[,\s]+(?:TO\s+)?(?:BEFORE\s+ME\s+)?.*?this\s+(\d{1,2}\s+[A-Z]+\s+\d{4})",
+        
+        # "SUBSCRIBED AND SWORN to before me this ___FEB 02 2026___ day of 2026"
+        # Handle dates surrounded by underscores or blanks
+        r"this\s+[^A-Z0-9]*?([A-Z]+\s+\d{1,2}\s+\d{4})[^A-Z0-9]*?\s+day",
+        
+        # "this ___ day of 02 FEB 2026"
+        r"this\s+[^A-Z0-9]*?day\s+of\s+[^A-Z0-9]*?(\d{1,2}\s+[A-Z]+\s+\d{4})",
+        
         # "IN WITNESS WHEREOF, I have hereunto set my hand this FEB 02 2026"
         r"set my hand this\s+([A-Z]+\s+\d{1,2}\s+\d{4})",
-        # "this 02 FEB 2026 day of February, 2026"
-        r"this\s+(\d{1,2}\s+[A-Z]+\s+\d{4})\s+day",
-        # "Date of Notarization: Feb. 02, 2020" (waiver)
-        r"Date of Notarization:\s*([A-Za-z]+\.?\s*\d{1,2},?\s*\d{4})",
+        
+        # "IN WITNESS WHEREOF, we have set our hands this 02 FEB 2026"
+        r"set our hands this\s+(\d{1,2}\s+[A-Z]+\s+\d{4})",
+        
+        # "IN WITNESS WHEREOF, the parties have hereunto set their hands on this 02 FEB 2026"
+        r"set their hands on this\s+(\d{1,2}\s+[A-Z]+\s+\d{4})",
+        
+        # Generic "this" followed by date (day-month-year or month-day-year)
+        r"this\s+[^A-Z0-9]*?(\d{1,2}\s+[A-Z]+\s+\d{4})",
+        r"this\s+[^A-Z0-9]*?([A-Z]+\s+\d{1,2}\s+\d{4})",
+        
+        # Fallback: any date pattern near notarial keywords
+        r"(?:SUBSCRIBED|SWORN|NOTARY|NOTARIZED).*?(\d{1,2}\s+[A-Z]+\s+\d{4})",
+        r"(?:SUBSCRIBED|SWORN|NOTARY|NOTARIZED).*?([A-Z]+\s+\d{1,2}\s+\d{4})",
     ]
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
         if match:
             date_str = match.group(1).strip()
-            # Clean up extra spaces
-            date_str = re.sub(r'\s+', ' ', date_str)
-            return date_str
+            # Clean up underscores and extra spaces
+            date_str = re.sub(r'_+', ' ', date_str)  # replace underscores with space
+            date_str = re.sub(r'\s+', ' ', date_str)  # collapse multiple spaces
+            date_str = date_str.strip()
+            # Validate date format (should contain month name and year)
+            if re.search(r'[A-Za-z]{3,}', date_str) and re.search(r'\d{4}', date_str):
+                return date_str
     return None
 
 def extract_document_number(text):
@@ -53,6 +78,16 @@ def extract_document_number(text):
         r"Doc\.?\s*No\.?\s*[:;]?\s*([^;\s]+)",
         # "Document No.:"
         r"Document\s+No\.?\s*[:;]?\s*([^;\s]+)",
+        # "Doc #" or "Doc #:"
+        r"Doc\s*#\s*[:;]?\s*([^;\s]+)",
+        # "Document #"
+        r"Document\s+#\s*[:;]?\s*([^;\s]+)",
+        # "Doc Number:"
+        r"Doc\s+Number\s*[:;]?\s*([^;\s]+)",
+        # "Document Number:"
+        r"Document\s+Number\s*[:;]?\s*([^;\s]+)",
+        # "Doc.:" (some might have just Doc.:)
+        r"Doc\.\s*[:;]?\s*([^;\s]+)",
     ]
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
@@ -61,7 +96,8 @@ def extract_document_number(text):
             # Remove non-alphanumeric characters at ends
             doc_no = re.sub(r'^[^A-Za-z0-9]+|[^A-Za-z0-9]+$', '', doc_no)
             # Check if doc_no is just a slash or invalid
-            if doc_no in ['/', 'V', '']:
+            invalid_vals = ['/', 'V', ':', ';', '\\', '|', '']
+            if doc_no in invalid_vals:
                 return None
             return doc_no
     return None
@@ -259,6 +295,58 @@ def extract_series_year(text):
             return match.group(1).strip()
     return None
 
+def classify_document_type(doc_type: str) -> Optional[str]:
+    """Classify document type into standardized categories."""
+    if not doc_type:
+        return None
+    
+    doc_type_upper = doc_type.upper()
+    
+    # Mapping of keywords to categories
+    categories = {
+        'AFFIDAVIT': 'Affidavit',
+        'WAIVER': 'Waiver',
+        'AUTHORIZATION': 'Authorization',
+        'DESIGNATION': 'Authorization',
+        'VERIFICATION': 'Verification',
+        'CERTIFICATION': 'Certification',
+        'JUDICIAL': 'Judicial Affidavit',
+        'DEED': 'Deed',
+        'CONTRACT': 'Contract',
+        'POWER OF ATTORNEY': 'Power of Attorney',
+        'SALE': 'Deed',
+        'MARRIAGE': 'Family Law',
+        'NULLITY': 'Family Law',
+        'ATTESTATION': 'Attestation',
+        'ACKNOWLEDGMENT': 'Acknowledgment',
+    }
+    
+    # Check for exact matches first
+    for keyword, category in categories.items():
+        if keyword in doc_type_upper:
+            return category
+    
+    # Fallback categories based on partial matches
+    if 'AFFIDAVIT' in doc_type_upper:
+        return 'Affidavit'
+    if 'WAIVER' in doc_type_upper:
+        return 'Waiver'
+    if 'AUTHORIZATION' in doc_type_upper or 'DESIGNATION' in doc_type_upper:
+        return 'Authorization'
+    if 'VERIFICATION' in doc_type_upper:
+        return 'Verification'
+    if 'CERTIFICATION' in doc_type_upper:
+        return 'Certification'
+    if 'JUDICIAL' in doc_type_upper:
+        return 'Judicial Affidavit'
+    if 'DEED' in doc_type_upper:
+        return 'Deed'
+    if 'CONTRACT' in doc_type_upper:
+        return 'Contract'
+    
+    # Default to original document type
+    return doc_type
+
 def extract_lastname_enhanced(text):
     """Extract lastname of the party, handling corporations/juridical entities and waivers."""
     # First check if this is a waiver document
@@ -348,6 +436,28 @@ def parse_markdown_file(file_path, db_manager=None, doc_id=None):
     # Remove markdown headers (# and ##) for cleaner text
     clean_content = re.sub(r'^#+\s.*$', '', content, flags=re.MULTILINE)
     
+    # Check if content is empty or too short (OCR failure)
+    if len(clean_content.strip()) < 10:
+        if db_manager and doc_id:
+            db_manager.add_error_log(
+                document_id=doc_id,
+                agent_name='parse',
+                error_type='ocr_empty',
+                error_message='OCR output is empty or too short',
+                error_details={'content_length': len(clean_content)}
+            )
+        # Return empty info
+        return {
+            'filename': file_path.name,
+            'date_of_notarization': None,
+            'document_number': None,
+            'document_type': None,
+            'page_number': None,
+            'book_number': None,
+            'series_year': None,
+            'lastname': None
+        }
+    
     info = {
         'filename': file_path.name,
         'date_of_notarization': extract_date_of_notarization(clean_content),
@@ -386,19 +496,45 @@ def parse_markdown_file(file_path, db_manager=None, doc_id=None):
                                               'document_type', 'lastname'] if info[field])
             confidence = fields_found / 4.0  # 0.0 to 1.0
             
+            # Classify document type
+            document_category = classify_document_type(info['document_type'])
+            
             db_manager.add_extracted_data(
                 document_id=doc_id,
                 date_of_notarization=info['date_of_notarization'],
                 document_number=info['document_number'],
                 document_type=info['document_type'],
+                document_category=document_category,
                 page_number=info['page_number'],
                 book_number=info['book_number'],
                 series_year=info['series_year'],
                 lastname=info['lastname'],
                 is_waiver=is_waiver,
                 is_corporate=is_corporate,
+                extraction_method='regex',
                 confidence_score=confidence
             )
+            
+            # Log missing fields as warnings
+            missing_fields = []
+            if not info['date_of_notarization']:
+                missing_fields.append('date_of_notarization')
+            if not info['document_number'] and not is_waiver:
+                # Document number not required for waiver documents
+                missing_fields.append('document_number')
+            if not info['document_type']:
+                missing_fields.append('document_type')
+            if not info['lastname']:
+                missing_fields.append('lastname')
+            
+            if missing_fields:
+                db_manager.add_error_log(
+                    document_id=doc_id,
+                    agent_name='parse',
+                    error_type='missing_field',
+                    error_message=f"Missing fields: {', '.join(missing_fields)}",
+                    error_details={'missing_fields': missing_fields, 'is_waiver': is_waiver}
+                )
         except Exception as e:
             print(f"Warning: Failed to store extracted data in database: {e}")
     

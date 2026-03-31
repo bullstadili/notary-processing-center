@@ -197,9 +197,10 @@ class DatabaseManager:
     
     def add_extracted_data(self, document_id: int, date_of_notarization: str = None,
                           document_number: str = None, document_type: str = None,
-                          page_number: str = None, book_number: str = None,
-                          series_year: str = None, lastname: str = None,
-                          is_waiver: bool = False, is_corporate: bool = False,
+                          document_category: str = None, page_number: str = None,
+                          book_number: str = None, series_year: str = None,
+                          lastname: str = None, is_waiver: bool = False,
+                          is_corporate: bool = False, extraction_method: str = 'regex',
                           confidence_score: float = None) -> int:
         """Add extracted data for a document."""
         with self:
@@ -210,12 +211,13 @@ class DatabaseManager:
                 
                 self.cursor.execute("""
                     INSERT INTO extracted_data 
-                    (document_id, date_of_notarization, document_number, document_type, 
-                     page_number, book_number, series_year, lastname, is_waiver, is_corporate, confidence_score)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (document_id, date_of_notarization, document_number, document_type,
+                     document_category, page_number, book_number, series_year, lastname,
+                     is_waiver, is_corporate, extraction_method, confidence_score)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (document_id, date_of_notarization, document_number, document_type,
-                      page_number, book_number, series_year, lastname, 
-                      is_waiver_int, is_corporate_int, confidence_score))
+                      document_category, page_number, book_number, series_year, lastname,
+                      is_waiver_int, is_corporate_int, extraction_method, confidence_score))
                 ext_id = self.cursor.lastrowid
                 self.conn.commit()
                 
@@ -231,13 +233,14 @@ class DatabaseManager:
                 self.cursor.execute("""
                     UPDATE extracted_data 
                     SET date_of_notarization = ?, document_number = ?, document_type = ?,
-                        page_number = ?, book_number = ?, series_year = ?, lastname = ?,
-                        is_waiver = ?, is_corporate = ?, confidence_score = ?,
-                        extraction_timestamp = CURRENT_TIMESTAMP
+                        document_category = ?, page_number = ?, book_number = ?,
+                        series_year = ?, lastname = ?, is_waiver = ?, is_corporate = ?,
+                        extraction_method = ?, confidence_score = ?, extraction_timestamp = CURRENT_TIMESTAMP
                     WHERE document_id = ?
                 """, (date_of_notarization, document_number, document_type,
-                      page_number, book_number, series_year, lastname,
-                      is_waiver_int, is_corporate_int, confidence_score, document_id))
+                      document_category, page_number, book_number, series_year,
+                      lastname, is_waiver_int, is_corporate_int, extraction_method,
+                      confidence_score, document_id))
                 self.conn.commit()
                 logger.info(f"Updated extracted data for document {document_id}")
                 return 0
@@ -379,6 +382,29 @@ class DatabaseManager:
             # Documents with extracted data
             self.cursor.execute("SELECT COUNT(*) as count FROM extracted_data")
             stats['documents_extracted'] = self.cursor.fetchone()['count']
+            
+            # Extraction completeness statistics
+            self.cursor.execute("""
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN date_of_notarization IS NOT NULL THEN 1 ELSE 0 END) as has_date,
+                    SUM(CASE WHEN document_number IS NOT NULL THEN 1 ELSE 0 END) as has_doc_no,
+                    SUM(CASE WHEN document_type IS NOT NULL THEN 1 ELSE 0 END) as has_doc_type,
+                    SUM(CASE WHEN lastname IS NOT NULL THEN 1 ELSE 0 END) as has_lastname,
+                    SUM(CASE WHEN document_category IS NOT NULL THEN 1 ELSE 0 END) as has_category
+                FROM extracted_data
+            """)
+            row = self.cursor.fetchone()
+            if row and row['total'] > 0:
+                total = row['total']
+                stats['extraction_completeness'] = {
+                    'total_extracted': total,
+                    'date_of_notarization': row['has_date'] / total * 100,
+                    'document_number': row['has_doc_no'] / total * 100,
+                    'document_type': row['has_doc_type'] / total * 100,
+                    'lastname': row['has_lastname'] / total * 100,
+                    'document_category': row['has_category'] / total * 100,
+                }
             
             # Documents renamed
             self.cursor.execute("""
