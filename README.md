@@ -9,6 +9,7 @@ This project provides a set of agents for processing notarial PDF documents:
 - **Parse Agent**: Extracts key information (dates, document numbers, names, etc.) from OCR output
 - **Rename Agent**: Renames PDF files based on extracted information with standardized naming
 - **Database Agent**: Manages SQLite database for tracking processing history and audit trails
+- **Main GUI Agent**: Integrated desktop interface for running all agents from a single application
 - **Validation GUI Agent**: Desktop Tkinter interface for reviewing and correcting extracted data
 
 ## Project Structure
@@ -25,6 +26,7 @@ notary-processing-center/
 ├── database_admin.py           # Database administration
 ├── database_schema.sqlite.sql  # SQL schema
 ├── init_database.py            # Database initialization
+├── main_gui.py           # Main desktop interface for all agents
 ├── validation_gui.py           # Tkinter GUI for data validation
 ├── utils/                      # Utility scripts
 │   ├── analyze_dates.py        # Date analysis utilities
@@ -107,6 +109,15 @@ View statistics:
 ```bash
 kilo agent database -- stats
 ```
+
+### Main GUI
+
+Run the integrated desktop interface:
+```bash
+python3 main_gui.py
+```
+
+This opens a tabbed application with access to all agents.
 
 ## Data Flow
 

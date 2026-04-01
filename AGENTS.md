@@ -244,6 +244,47 @@ All other agents (OCR, Parse, Rename) automatically delegate to the database whe
 - Full audit trail tracks all processing steps for compliance
 - Database can be queried for reporting and statistics
 
+## Main GUI Agent
+
+Integrated desktop interface for running all agents from a single application.
+
+### Setup
+
+No additional setup required. Tkinter is included with Python.
+
+### Usage
+
+Run the main GUI:
+```bash
+python3 main_gui.py
+```
+
+The GUI will open as a desktop application with tabs for each agent.
+
+### Features
+
+- **Unified interface**: Single application for OCR, Parse, Rename, Database, and Validation agents
+- **Tabbed layout**: Organized tabs for each agent's functionality
+- **Real‑time output**: Live console output for each agent's operations
+- **Integrated validation**: Direct access to validation GUI from main interface
+- **Database administration**: Full database management tools
+- **Progress tracking**: Visual feedback for long-running operations
+- **Theme support**: Dark/light theme toggle for user preference
+
+### Integration
+
+- Uses the same SQLite database as other agents
+- Calls agent functions directly (not through Kilo CLI)
+- Maintains full audit trail for all operations
+- Compatible with existing data directories and file structures
+
+### Notes
+
+- The GUI runs locally as a desktop application
+- All operations are logged to the database audit trail
+- No command-line knowledge required for end users
+- Ideal for office staff who need to process notarial documents
+
 ## Validation GUI Agent
 
 Desktop Tkinter interface for reviewing and correcting OCR‑extracted data.
