@@ -24,15 +24,16 @@ except ImportError:
 def get_extracted_info(md_path, db_manager=None, doc_id=None):
     """
     Get extracted information, preferring validated database entries.
-    Returns dict with same keys as parse_markdown_file.
+    Returns dict with same keys as parse_markdown_file plus is_waiver, is_corporate.
     """
     # Try to get validated data from database first
     if db_manager and doc_id:
         try:
             extracted = db_manager.get_extracted_data(doc_id)
-            if extracted and extracted.get('validated') == 1:
+            if extracted and any(extracted.get(field) for field in ['date_of_notarization', 'document_number', 'document_type', 'lastname']):
                 # Convert database fields to info dict
                 info = {
+                    'filename': md_path.name,
                     'date_of_notarization': extracted.get('date_of_notarization'),
                     'document_number': extracted.get('document_number'),
                     'document_type': extracted.get('document_type'),
@@ -44,7 +45,7 @@ def get_extracted_info(md_path, db_manager=None, doc_id=None):
                     'is_corporate': bool(extracted.get('is_corporate', 0)),
                 }
                 # Ensure we have at least some data
-                if any(info.values()):
+                if any(v for v in info.values() if v not in (None, '')):
                     return info
         except Exception as e:
             print(f"  Warning: Failed to get validated data: {e}")

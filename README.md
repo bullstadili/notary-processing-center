@@ -9,7 +9,7 @@ This project provides a set of agents for processing notarial PDF documents:
 - **Parse Agent**: Extracts key information (dates, document numbers, names, etc.) from OCR output
 - **Rename Agent**: Renames PDF files based on extracted information with standardized naming
 - **Database Agent**: Manages SQLite database for tracking processing history and audit trails
-- **Validation Dashboard Agent**: Web-based interface for reviewing and correcting extracted data
+- **Validation GUI Agent**: Desktop Tkinter interface for reviewing and correcting extracted data
 
 ## Project Structure
 
@@ -24,10 +24,16 @@ notary-processing-center/
 ├── database_manager.py         # Database operations
 ├── database_admin.py           # Database administration
 ├── database_schema.sqlite.sql  # SQL schema
-├── analyze_dates.py            # Date analysis utilities
-├── check_ocr_status.py         # OCR status checking
 ├── init_database.py            # Database initialization
-├── reprocess_failed.py         # Failed document reprocessing
+├── validation_gui.py           # Tkinter GUI for data validation
+├── utils/                      # Utility scripts
+│   ├── analyze_dates.py        # Date analysis utilities
+│   ├── check_ocr_status.py     # OCR status checking
+│   ├── import_rename_ops.py    # Import rename operations from logs
+│   └── reprocess_failed.py     # Failed document reprocessing
+├── input/                      # Input PDF files
+├── ocr-output/                 # OCR markdown output
+├── renamed/                    # Renamed PDF files
 └── __pycache__/                # Python cache
 ```
 

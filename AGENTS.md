@@ -244,45 +244,42 @@ All other agents (OCR, Parse, Rename) automatically delegate to the database whe
 - Full audit trail tracks all processing steps for compliance
 - Database can be queried for reporting and statistics
 
-## Validation Dashboard Agent
+## Validation GUI Agent
 
-Web-based interface for reviewing and correcting OCR‑extracted data.
+Desktop Tkinter interface for reviewing and correcting OCR‑extracted data.
 
 ### Setup
 
-1. Install Python dependencies:
-   ```bash
-   python3 -m pip install -r requirements.txt
-   ```
-   (or use the virtual environment: `source venv/bin/activate`)
-
-2. Ensure the SQLite database (`notary_processing.db`) exists and contains extracted data.
+No additional setup required beyond other agents. Tkinter is included with Python.
 
 ### Usage
 
-Run the dashboard:
+Run the GUI:
 ```bash
-python3 validation_dashboard.py
+python3 validation_gui.py
 ```
 
-Then open http://localhost:5000 in your browser.
+The GUI will open as a desktop application.
 
 ### Features
 
-- **Dashboard overview**: Statistics on validation progress, confidence scores, document types.
-- **Document review**: List of documents needing validation (low confidence or not validated).
-- **Field‑level correction**: Edit any extracted field with real‑time preview of OCR text.
-- **Validation tracking**: Mark documents as validated, track who validated and when.
+- **Document list**: Left panel shows documents needing validation, color‑coded by confidence score.
+- **Field‑level editing**: Right panel provides editable fields for all extracted data (date, document number, type, lastname, etc.).
+- **Real‑time filename preview**: See how the filename will look as you edit fields.
+- **OCR text preview**: View raw OCR output for reference.
+- **Validation tracking**: Mark documents as validated, track timestamp and editor.
+- **Integrated renaming**: Rename files directly from the GUI using validated data.
 - **Audit trail**: All corrections are logged to the `audit_log` table.
 
 ### Integration
 
-- Reads from `extracted_data` table (new columns: `validated`, `validated_at`, `validated_by`, `correction_notes`).
+- Reads from `extracted_data` table (columns: `validated`, `validated_at`, `validated_by`, `correction_notes`).
 - The Rename Agent automatically uses validated data when available.
 - All corrections trigger the existing audit‑log trigger.
 
 ### Notes
 
-- The dashboard runs locally on port 5000 (configurable in code).
-- No authentication by default; add authentication for multi‑user environments.
-- For production deployment, consider using a WSGI server (gunicorn) behind a reverse proxy.
+- The GUI runs locally as a desktop application.
+- No web server or browser required.
+- Simple interface ideal for non‑technical staff.
+- For multi‑user environments, consider file‑locking or network‑shared database.
